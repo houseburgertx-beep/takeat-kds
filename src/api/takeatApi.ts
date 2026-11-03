@@ -1,11 +1,14 @@
 const BASE_URL = 'https://public-api.takeat.app';
 
 export interface StoredAuth {
+  authMethod: 'credentials' | 'api_key';
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   expiresAt: number;
   restaurantId: number;
-  apiKey: string;
+  restaurantName?: string;
+  email?: string;
+  apiKey?: string;
 }
 
 export interface KDSItem {
@@ -54,6 +57,50 @@ export function clearAuth(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+/**
+ * Login direto com E-mail e Senha da Takeat (sessão oficial PDV/Gestor)
+ * Endpoint: POST https://webhook.takeat.app/public/api/sessions
+ */
+export async function loginWithCredentials(email: string, pass: string): Promise<StoredAuth> {
+  const cleanEmail = email.trim();
+  if (!cleanEmail || !pass) {
+    throw new Error('Informe e-mail e senha.');
+  }
+
+  const resp = await fetch('https://webhook.takeat.app/public/api/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: cleanEmail, password: pass }),
+  });
+
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    if (resp.status === 401) {
+      throw new Error('E-mail ou senha incorretos na Takeat.');
+    }
+    throw new Error(`Não foi possível entrar na Takeat (HTTP ${resp.status}).`);
+  }
+
+  const id = Number(data.restaurant?.id);
+  if (typeof data.token !== 'string' || !data.token || !id) {
+    throw new Error('Resposta de login inválida: sessão não confirmada pela Takeat.');
+  }
+
+  const restaurantName = data.restaurant?.fantasy_name || data.restaurant?.name || `Restaurante #${id}`;
+
+  const auth: StoredAuth = {
+    authMethod: 'credentials',
+    accessToken: data.token,
+    expiresAt: Date.now() + 15 * 86400000, // 15 dias de validade
+    restaurantId: id,
+    restaurantName,
+    email: cleanEmail,
+  };
+
+  saveAuth(auth);
+  return auth;
+}
+
 async function postOAuthForm(params: Record<string, string>): Promise<{
   access_token: string;
   refresh_token: string;
@@ -93,6 +140,7 @@ export async function exchangeApiKey(apiKey: string, restaurantId: number): Prom
   });
 
   const auth: StoredAuth = {
+    authMethod: 'api_key',
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000 - 60_000,
@@ -104,6 +152,13 @@ export async function exchangeApiKey(apiKey: string, restaurantId: number): Prom
 }
 
 export async function refreshToken(auth: StoredAuth): Promise<StoredAuth | null> {
+  if (auth.authMethod === 'credentials') {
+    // Credentials token is long-lived (15 days)
+    return auth;
+  }
+
+  if (!auth.refreshToken) return null;
+
   try {
     const data = await postOAuthForm({
       grant_type: 'refresh_token',
@@ -124,14 +179,21 @@ export async function refreshToken(auth: StoredAuth): Promise<StoredAuth | null>
 }
 
 async function apiFetch(path: string, auth: StoredAuth, retried = false): Promise<unknown> {
-  const resp = await fetch(`${BASE_URL}${path}`, {
+  let url: string;
+  if (auth.authMethod === 'credentials') {
+    url = `https://webhook.takeat.app/api${path}`;
+  } else {
+    url = `${BASE_URL}${path}`;
+  }
+
+  const resp = await fetch(url, {
     headers: {
       Authorization: `Bearer ${auth.accessToken}`,
       'Content-Type': 'application/json',
     },
   });
 
-  if (resp.status === 401 && !retried) {
+  if (resp.status === 401 && !retried && auth.authMethod === 'api_key') {
     const refreshed = await refreshToken(auth);
     if (refreshed) return apiFetch(path, refreshed, true);
     throw new Error('UNAUTHORIZED');
@@ -195,12 +257,16 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
   const start = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const end = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
 
-  const query = new URLSearchParams({
-    restaurant_id: String(auth.restaurantId),
+  const queryParams: Record<string, string> = {
     start_date: start,
     end_date: end,
-  });
+  };
 
+  if (auth.authMethod === 'api_key') {
+    queryParams.restaurant_id = String(auth.restaurantId);
+  }
+
+  const query = new URLSearchParams(queryParams);
   const raw = await apiFetch(`/v1/table-sessions?${query.toString()}`, auth) as unknown;
 
   const sessions: Record<string, unknown>[] = Array.isArray(raw)
@@ -290,6 +356,5 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
     return s === 'open' || s === 'closing' || s === 'pending' || s === 'in_production' || s === 'accepted' || s === 'waiting';
   });
 
-  // If there are currently active orders, return them. Otherwise return recent ones so screen isn't empty when testing.
   return (activeOnly.length > 0 ? activeOnly : orders).slice(0, 30);
 }

@@ -6,6 +6,7 @@ interface Props {
   orderCount: number;
   doneCount: number;
   errorMsg: string;
+  restaurantName?: string;
   onRetry: () => void;
   onLogout: () => void;
   onMarkAllDone: () => void;
@@ -18,7 +19,7 @@ const STATUS_CONFIG = {
   error: { dot: '#ef4444', label: 'Erro' },
 } as const;
 
-export function StatusBar({ status, lastUpdate, orderCount, doneCount, errorMsg, onRetry, onLogout, onMarkAllDone }: Props) {
+export function StatusBar({ status, lastUpdate, orderCount, doneCount, errorMsg, restaurantName, onRetry, onLogout, onMarkAllDone }: Props) {
   const cfg = STATUS_CONFIG[status];
   const timeStr = lastUpdate
     ? lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -39,6 +40,22 @@ export function StatusBar({ status, lastUpdate, orderCount, doneCount, errorMsg,
           fontSize: '14px', flexShrink: 0,
         }}>🍳</div>
         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>KDS</span>
+        {restaurantName && (
+          <span style={{
+            fontSize: '11px',
+            color: '#3b82f6',
+            background: 'rgba(59,130,246,0.12)',
+            padding: '2px 8px',
+            borderRadius: '6px',
+            fontWeight: 600,
+            maxWidth: 160,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {restaurantName}
+          </span>
+        )}
       </div>
 
       <div style={{ width: 1, height: 20, background: 'var(--border-default)' }} />

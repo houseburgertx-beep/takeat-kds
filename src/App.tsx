@@ -49,6 +49,7 @@ export default function App() {
         orderCount={orders.length}
         doneCount={doneOrders.length}
         errorMsg={errorMsg}
+        restaurantName={auth.restaurantName}
         onRetry={retry}
         onLogout={handleLogout}
         onMarkAllDone={markAllDone}
