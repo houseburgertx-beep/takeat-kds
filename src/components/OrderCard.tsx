@@ -1,15 +1,13 @@
-import { useRef, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Clock,
-  Check,
   RotateCcw,
-  PackageCheck,
+  Check,
   AlertCircle,
-  ShoppingBag,
+  Plus,
+  Truck,
   Store,
   Utensils,
-  User,
-  Plus,
 } from 'lucide-react';
 import { useTimer } from '../hooks/useTimer';
 import type { KDSOrder } from '../api/takeatApi';
@@ -23,326 +21,304 @@ interface Props {
   onDispatch?: (id: string | number) => void;
 }
 
-export function OrderCard({ order, stage, theme, onMarkReady, onUnmarkReady, onDispatch }: Props) {
+export function OrderCard({
+  order,
+  stage,
+  theme,
+  onMarkReady,
+  onUnmarkReady,
+  onDispatch,
+}: Props) {
   const timer = useTimer(order.createdAt);
-  const cardRef = useRef<HTMLDivElement>(null);
   const isLight = theme === 'light';
 
-  useEffect(() => {
-    if (order.isNew && cardRef.current) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [order.isNew]);
+  // Controle interno de "Iniciar Preparo" -> "Finalizar Preparo"
+  const [isPreparing, setIsPreparing] = useState(false);
 
-  const isIfood = order.channel.toUpperCase() === 'IFOOD';
   const isDelivery = order.type === 'delivery';
   const isBalcao = order.type === 'balcao';
 
-  // Configuração visual do canal / tipo de pedido (sem emojis)
-  let channelConfig = {
-    label: 'MESA',
-    badgeBg: isLight ? '#eff6ff' : 'rgba(59, 130, 246, 0.12)',
-    badgeBorder: isLight ? '#bfdbfe' : 'rgba(59, 130, 246, 0.3)',
-    badgeText: isLight ? '#1d4ed8' : '#60a5fa',
-    topAccent: '#2563eb',
-    Icon: Utensils,
+  // Ícone discreto para o avatar (sem emojis de IA)
+  const TypeIcon = isDelivery ? Truck : isBalcao ? Store : Utensils;
+
+  const handleActionClick = () => {
+    if (stage === 'in_production') {
+      if (!isPreparing) {
+        // Primeiro clique: Inicia o preparo
+        setIsPreparing(true);
+      } else {
+        // Segundo clique: Finaliza o preparo e move para a coluna Pronto
+        onMarkReady?.(order.id);
+      }
+    }
   };
-
-  if (isIfood) {
-    channelConfig = {
-      label: 'iFood',
-      badgeBg: isLight ? '#fff1f2' : 'rgba(234, 29, 44, 0.14)',
-      badgeBorder: isLight ? '#fecdd3' : 'rgba(234, 29, 44, 0.35)',
-      badgeText: isLight ? '#be123c' : '#fb7185',
-      topAccent: '#e11d48',
-      Icon: ShoppingBag,
-    };
-  } else if (isDelivery) {
-    channelConfig = {
-      label: 'DELIVERY',
-      badgeBg: isLight ? '#fff7ed' : 'rgba(249, 115, 22, 0.14)',
-      badgeBorder: isLight ? '#fed7aa' : 'rgba(249, 115, 22, 0.35)',
-      badgeText: isLight ? '#c2410c' : '#fb923c',
-      topAccent: '#ea580c',
-      Icon: ShoppingBag,
-    };
-  } else if (isBalcao) {
-    channelConfig = {
-      label: 'BALCÃO',
-      badgeBg: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.14)',
-      badgeBorder: isLight ? '#a7f3d0' : 'rgba(16, 185, 129, 0.35)',
-      badgeText: isLight ? '#047857' : '#34d399',
-      topAccent: '#059669',
-      Icon: Store,
-    };
-  }
-
-  // Estilos cromáticos de SLA / Timer
-  const timerConfig = {
-    ok: {
-      bg: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.12)',
-      border: isLight ? '#a7f3d0' : 'rgba(16, 185, 129, 0.3)',
-      text: isLight ? '#047857' : '#34d399',
-    },
-    warn: {
-      bg: isLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.14)',
-      border: isLight ? '#fde68a' : 'rgba(245, 158, 11, 0.35)',
-      text: isLight ? '#b45309' : '#fbbf24',
-    },
-    danger: {
-      bg: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.16)',
-      border: isLight ? '#fecaca' : 'rgba(239, 68, 68, 0.45)',
-      text: isLight ? '#b91c1c' : '#f87171',
-    },
-  }[timer.urgency];
-
-  const ChannelIcon = channelConfig.Icon;
 
   return (
     <article
-      ref={cardRef}
-      className={order.isNew ? 'card-new' : 'card-enter'}
       style={{
-        background: isLight ? '#ffffff' : 'linear-gradient(180deg, #181d26 0%, #11151c 100%)',
-        border: isLight ? '1.5px solid #e2e8f0' : '1.5px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '22px',
+        background: isLight ? '#ffffff' : '#151b26',
+        // Borda azul oficial da Takeat visível na foto do tablet
+        border: isLight ? '2px solid #2563eb' : '2px solid #3b82f6',
+        borderRadius: '18px',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
+        justifyContent: 'space-between',
+        padding: '16px',
+        // Sombra suave com profundidade real solicitada
         boxShadow: isLight
-          ? '0 10px 25px -4px rgba(0, 0, 0, 0.07), 0 4px 10px -2px rgba(0, 0, 0, 0.03)'
-          : '0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.09)',
+          ? '0 10px 25px -4px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04)'
+          : '0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 4px 10px rgba(0, 0, 0, 0.35)',
         transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        minHeight: '260px',
       }}
     >
-      {/* Linha de destaque no topo */}
-      <div style={{ height: 3.5, background: channelConfig.topAccent }} />
-
-      {/* Selo NOVO para pedidos recentes */}
-      {order.isNew && (
-        <div style={{
-          position: 'absolute', top: 12, right: 12, zIndex: 10,
-          background: '#ef4444', color: '#ffffff', fontSize: '9px',
-          fontWeight: 900, padding: '2px 8px', borderRadius: '999px',
-          letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>
-          NOVO
-        </div>
-      )}
-
-      {/* Cabeçalho do Card */}
-      <header style={{
-        padding: '14px 16px 12px',
-        borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid rgba(255, 255, 255, 0.06)',
-      }}>
-        {/* Linha superior: Canal / Tipo e Timer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              background: channelConfig.badgeBg,
-              border: `1px solid ${channelConfig.badgeBorder}`,
-              color: channelConfig.badgeText,
-              fontSize: '11px', fontWeight: 800, padding: '3px 8px',
-              borderRadius: '8px', letterSpacing: '0.04em',
-            }}>
-              <ChannelIcon className="w-3.5 h-3.5" strokeWidth={2.4} />
-              <span>{channelConfig.label}</span>
-            </span>
-
-            {order.brandName && (
-              <span style={{
-                fontSize: '11px',
-                color: isLight ? '#64748b' : '#94a3b8',
-                padding: '2px 6px',
-                borderRadius: '6px',
-                background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.04)',
-                fontWeight: 600,
-              }}>
-                {order.brandName}
-              </span>
-            )}
-          </div>
-
-          {/* Timer em cápsula */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            background: timerConfig.bg,
-            border: `1px solid ${timerConfig.border}`,
-            padding: '3px 8px', borderRadius: '8px',
-          }}>
-            <Clock className="w-3 h-3" style={{ color: timerConfig.text }} />
-            <span style={{
-              fontSize: '12px', fontWeight: 700,
-              color: timerConfig.text, fontFamily: 'monospace',
-            }}>
-              {timer.label}
-            </span>
-          </div>
-        </div>
-
-        {/* Identificação Principal do Pedido (NÚMERO DO PEDIDO BEM DESTACADO) */}
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <div>
-            <h2 style={{
-              fontSize: isDelivery ? '22px' : '20px',
-              fontWeight: 900,
-              color: isLight ? '#0f172a' : '#ffffff',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.15,
-            }}>
-              {order.orderNumber || order.tableLabel}
-            </h2>
-
-            {/* Nome do Cliente */}
-            {order.clientName && (
-              <div style={{
-                fontSize: '13px',
-                fontWeight: 600,
-                color: isLight ? '#475569' : '#94a3b8',
-                marginTop: 2,
+      {/* ── TOPO DO CARD: Avatar circular + Número do Pedido + Timer + Código Takeat ── */}
+      <div>
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            paddingBottom: '12px',
+            borderBottom: isLight ? '1.5px solid #f1f5f9' : '1.5px solid rgba(255, 255, 255, 0.06)',
+            marginBottom: '12px',
+          }}
+        >
+          {/* Lado Esquerdo: Avatar Preto circular + Número do Pedido grande + Tipo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: '#111827',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 5,
-              }}>
-                <User className="w-3.5 h-3.5" style={{ color: isLight ? '#64748b' : '#94a3b8' }} />
-                <span>{order.clientName}</span>
+                justifyContent: 'center',
+                color: '#ffffff',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+              }}
+            >
+              <TypeIcon className="w-5 h-5 text-white" strokeWidth={2.2} />
+            </div>
+
+            <div>
+              {/* Número do Pedido (#70) em fonte extra negrito como no KDS físico */}
+              <div
+                style={{
+                  fontSize: '24px',
+                  fontWeight: 900,
+                  color: isLight ? '#0f172a' : '#ffffff',
+                  lineHeight: 1.1,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {order.orderNumber || `#${String(order.id).slice(-4)}`}
               </div>
-            )}
+
+              {/* Rótulo do tipo (Retirada, Delivery, Mesa) */}
+              <div
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  color: isLight ? '#334155' : '#94a3b8',
+                  marginTop: '2px',
+                }}
+              >
+                {order.typeLabel || (isDelivery ? 'Delivery' : isBalcao ? 'Retirada' : order.tableLabel)}
+                {order.clientName && order.type === 'delivery' && (
+                  <span style={{ fontWeight: 500, marginLeft: 6, fontSize: '13px', color: isLight ? '#64748b' : '#94a3b8' }}>
+                    • {order.clientName}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {order.totalPrice && (
-            <span style={{ fontSize: '12px', fontWeight: 700, color: isLight ? '#64748b' : '#64748b' }}>
-              R$ {parseFloat(order.totalPrice).toFixed(2)}
-            </span>
-          )}
-        </div>
-      </header>
+          {/* Lado Direito: Timer cápsula cyan/verde + Código do Pedido (Nº #494-5812) */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+            {/* Cápsula do Timer exatamente como na foto (fundo ciano suave) */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: isLight ? '#e6f7f5' : 'rgba(13, 148, 136, 0.18)',
+                border: isLight ? '1px solid #99e6df' : '1px solid rgba(13, 148, 136, 0.4)',
+                padding: '3px 9px',
+                borderRadius: '8px',
+              }}
+            >
+              <Clock className="w-3.5 h-3.5 text-teal-700" strokeWidth={2.5} />
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  color: isLight ? '#0d7377' : '#2dd4bf',
+                  fontFamily: 'monospace',
+                }}
+              >
+                {timer.label}
+              </span>
+            </div>
 
-      {/* Lista de Itens do Pedido */}
-      <div style={{
-        flex: 1,
-        padding: '12px 16px',
-        overflowY: 'auto',
-        maxHeight: 320,
-      }}>
-        {order.items.length === 0 ? (
-          <p style={{ color: isLight ? '#94a3b8' : '#64748b', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>
-            Nenhum item informado
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {order.items.map((item, idx) => (
+            {/* Código externo oficial do pedido (ex: Nº #494-5812) */}
+            <div
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: isLight ? '#64748b' : '#94a3b8',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {order.externalNumber || `Nº #${String(order.sessionId ?? order.id).slice(-6)}`}
+            </div>
+          </div>
+        </header>
+
+        {/* ── ITENS DO PEDIDO: Nome do item na esquerda + SLA (20 min) na direita ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+          {order.items.length === 0 ? (
+            <p style={{ color: isLight ? '#94a3b8' : '#64748b', fontSize: '13px', textAlign: 'center', padding: '12px 0' }}>
+              Nenhum item informado
+            </p>
+          ) : (
+            order.items.map((item, idx) => (
               <div
                 key={item.id ?? idx}
                 style={{
-                  padding: '8px 10px',
-                  borderRadius: '12px',
-                  background: isLight ? '#f8fafc' : 'rgba(255, 255, 255, 0.025)',
-                  border: isLight ? '1px solid #eef2f6' : '1px solid rgba(255, 255, 255, 0.04)',
+                  paddingBottom: '8px',
+                  borderBottom: idx < order.items.length - 1
+                    ? (isLight ? '1px dashed #e2e8f0' : '1px dashed rgba(255, 255, 255, 0.08)')
+                    : 'none',
                 }}
               >
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  {/* Badge de Quantidade */}
-                  <div style={{
-                    minWidth: 26, height: 26, borderRadius: '8px',
-                    background: isLight ? '#0f172a' : 'rgba(255, 255, 255, 0.08)',
-                    border: isLight ? 'none' : '1px solid rgba(255, 255, 255, 0.12)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '12px', fontWeight: 900,
-                    color: '#ffffff', flexShrink: 0,
-                  }}>
-                    {item.qty}x
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      color: isLight ? '#0f172a' : '#f8fafc',
+                {/* Linha principal: 1x Item + 20 min */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                  <div
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      color: isLight ? '#0f172a' : '#ffffff',
                       lineHeight: 1.3,
-                    }}>
-                      {item.name}
-                    </p>
-
-                    {/* Observação / Detalhe (alerta limpo sem emoji) */}
-                    {item.obs && (
-                      <div style={{
-                        marginTop: 5, padding: '4px 8px', borderRadius: '8px',
-                        background: isLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.12)',
-                        border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.25)',
-                        color: isLight ? '#b45309' : '#fbbf24',
-                        fontSize: '11px', fontWeight: 600,
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                      }}>
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0" style={{ color: isLight ? '#b45309' : '#fbbf24' }} />
-                        <span>{item.obs}</span>
-                      </div>
-                    )}
-
-                    {/* Complementos e adicionais */}
-                    {item.complements.length > 0 && (
-                      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        {item.complements.map((c, ci) => (
-                          <div key={ci} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                            <Plus className="w-3 h-3 text-sky-500 shrink-0" />
-                            <span style={{
-                              fontSize: '12px',
-                              color: isLight ? '#334155' : '#cbd5e1',
-                              fontWeight: 500,
-                            }}>
-                              {c.qty > 1 ? `${c.qty}x ` : ''}{c.name}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                      flex: 1,
+                    }}
+                  >
+                    <span style={{ color: isLight ? '#0f172a' : '#ffffff', marginRight: '6px' }}>
+                      {item.qty}x
+                    </span>
+                    <span>{item.name}</span>
                   </div>
+
+                  {/* Tempo SLA (ex: 20 min) */}
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: isLight ? '#334155' : '#cbd5e1',
+                      background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.06)',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.prepTimeMinutes ?? 20} min
+                  </span>
                 </div>
+
+                {/* Observação (se houver) */}
+                {item.obs && (
+                  <div
+                    style={{
+                      marginTop: '4px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      background: isLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.12)',
+                      border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.25)',
+                      color: isLight ? '#b45309' : '#fbbf24',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    <span>{item.obs}</span>
+                  </div>
+                )}
+
+                {/* Complementos e adicionais */}
+                {item.complements && item.complements.length > 0 && (
+                  <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '8px' }}>
+                    {item.complements.map((c, ci) => (
+                      <div key={ci} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Plus className="w-3 h-3 text-blue-500 shrink-0" />
+                        <span style={{ fontSize: '12px', color: isLight ? '#475569' : '#94a3b8', fontWeight: 500 }}>
+                          {c.qty > 1 ? `${c.qty}x ` : ''}{c.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Ações no Rodapé do Card */}
-      <footer style={{
-        padding: '12px 16px',
-        borderTop: isLight ? '1px solid #f1f5f9' : '1px solid rgba(255, 255, 255, 0.06)',
-        background: isLight ? '#fafafa' : 'rgba(0, 0, 0, 0.15)',
-      }}>
+      {/* ── BOTÃO DE AÇÃO: Iniciar Preparo -> Finalizar Preparo -> Pronto ── */}
+      <div>
         {stage === 'in_production' ? (
           <button
             type="button"
-            onClick={() => onMarkReady?.(order.id)}
+            onClick={handleActionClick}
             style={{
-              width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-              letterSpacing: '0.04em', textTransform: 'uppercase',
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              transition: 'opacity 0.15s ease',
+              width: '100%',
+              padding: '14px',
+              borderRadius: '12px',
+              border: 'none',
+              // Azul vibrante (#2563eb) para Iniciar; Verde (#10b981) para Finalizar
+              background: !isPreparing ? '#2563eb' : '#10b981',
+              color: '#ffffff',
+              fontSize: '15px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              letterSpacing: '0.02em',
+              boxShadow: !isPreparing
+                ? '0 4px 14px rgba(37, 99, 235, 0.35)'
+                : '0 4px 14px rgba(16, 185, 129, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'background-color 0.15s ease, transform 0.1s ease',
             }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.98)')}
+            onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
           >
             <Check className="w-4 h-4 stroke-[3]" />
-            <span>Marcar como Pronto</span>
+            <span>{!isPreparing ? 'Iniciar Preparo' : 'Finalizar Preparo'}</span>
           </button>
         ) : (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
               onClick={() => onUnmarkReady?.(order.id)}
               style={{
-                padding: '10px 12px', borderRadius: '10px',
-                border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.1)',
-                background: isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.04)',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: isLight ? '1.5px solid #cbd5e1' : '1.5px solid rgba(255, 255, 255, 0.12)',
+                background: isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
                 color: isLight ? '#475569' : '#94a3b8',
-                fontSize: '12px', fontWeight: 700,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
               }}
               title="Retornar para Em Produção"
             >
@@ -354,20 +330,29 @@ export function OrderCard({ order, stage, theme, onMarkReady, onUnmarkReady, onD
               type="button"
               onClick={() => onDispatch?.(order.id)}
               style={{
-                flex: 1, padding: '10px 14px', borderRadius: '10px', border: 'none',
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                color: '#ffffff', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                letterSpacing: '0.03em', textTransform: 'uppercase',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                flex: 1,
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#059669',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                letterSpacing: '0.02em',
+                boxShadow: '0 4px 14px rgba(5, 150, 105, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
             >
-              <PackageCheck className="w-4 h-4" />
+              <Check className="w-4 h-4 stroke-[3]" />
               <span>Despachar / Entregue</span>
             </button>
           </div>
         )}
-      </footer>
+      </div>
     </article>
   );
 }

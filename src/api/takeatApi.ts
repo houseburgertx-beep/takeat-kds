@@ -15,6 +15,7 @@ export interface KDSItem {
   id: number;
   name: string;
   qty: number;
+  prepTimeMinutes?: number;
   obs?: string;
   complements: Array<{
     category: string;
@@ -26,13 +27,15 @@ export interface KDSItem {
 export interface KDSOrder {
   id: string | number;
   sessionId: number;
-  orderNumber: string; // Ex: "#042" ou "#1578" ou "Mesa 4"
+  orderNumber: string; // Ex: "#70" ou "#1584"
+  externalNumber: string; // Ex: "Nº #494-5812"
   orderKey: string;
   tableNumber?: string | number;
   tableLabel: string;
   type: 'table' | 'delivery' | 'balcao';
+  typeLabel: string; // "Retirada" | "Delivery" | "Mesa 1" | "Balcão"
   channel: string; // 'IFOOD' | 'TAKEAT' | 'PDV' | 'MESA' | 'BALCAO'
-  status: string;
+  status: 'new' | 'preparing' | 'finished' | 'canceled';
   createdAt: string;
   brandName?: string;
   clientName?: string;
@@ -244,6 +247,7 @@ function parseOrderItems(rawOrders: Record<string, unknown>[]): KDSItem[] {
       id: Number(ord.id ?? idx),
       name,
       qty,
+      prepTimeMinutes: 20, // Tempo de preparo padrão visível no KDS
       obs: obs?.trim() ? obs.trim() : undefined,
       complements,
     };
@@ -251,11 +255,10 @@ function parseOrderItems(rawOrders: Record<string, unknown>[]): KDSItem[] {
 }
 
 /**
- * Busca APENAS pedidos EM ABERTO no momento (sem pedidos finalizados ou encerrados).
+ * Busca pedidos em aberto na Takeat
  */
 export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
   const now = new Date();
-  // Busca pedidos das últimas 12 horas (apenas o turno de trabalho atual)
   const start = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString();
   const end = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
 
@@ -282,7 +285,7 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
   for (const session of sessions) {
     const rawStatus = String(session.status ?? '').toLowerCase().trim();
 
-    // 1. REGRA RÍGIDA: Pedidos finalizados/encerrados/cancelados são DESCARTADOS!
+    // Filtro rigoroso: descarta pedidos encerrados ou cancelados de ontem
     const isClosedOrCompleted = Boolean(
       session.end_time ||
       session.completed_at ||
@@ -297,10 +300,19 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
     );
 
     if (isClosedOrCompleted) {
-      continue; // Ignora pedidos de ontem ou já entregues
+      continue;
     }
 
     const sessionId = Number(session.id);
+    const createdAtStr = String(session.start_time ?? session.created_at ?? now.toISOString());
+    const createdAtDate = new Date(createdAtStr);
+    const ageMinutes = (now.getTime() - createdAtDate.getTime()) / (60 * 1000);
+
+    // REGRA DE OURO: Descarta sessões fantasmas/antigas (com mais de 4 horas sem movimentação)
+    // Isso elimina pedidos de ontem com 1000+ minutos atrasados
+    if (ageMinutes > 240) {
+      continue;
+    }
     const tableObj = session.table as Record<string, unknown> | undefined;
     const tableNumber = tableObj?.table_number ?? session.table_number;
     const tableType = String(tableObj?.table_type ?? '').toLowerCase();
@@ -309,16 +321,16 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
     const isBalcao = Boolean(session.with_withdrawal || tableType === 'takeaway' || tableType === 'balcao' || (!isDelivery && (!tableNumber || Number(tableNumber) < 0)));
 
     let orderType: KDSOrder['type'] = 'table';
+    let typeLabel = 'Mesa';
     let channel = 'MESA';
     let orderNumber = '';
-    let tableLabel = '';
 
     const buyer = session.buyer as Record<string, unknown> | undefined;
     const clientName = buyer?.name ? String(buyer.name).trim() : undefined;
     const attendancePassword = session.attendance_password ? String(session.attendance_password) : undefined;
     const sessionNum = session.session_number ? String(session.session_number) : undefined;
 
-    // Extrair itens de baskets
+    // Extrair itens
     const rawItemsToParse: Record<string, unknown>[] = [];
     let basketId = '';
 
@@ -346,36 +358,39 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
 
     const items = parseOrderItems(rawItemsToParse);
 
-    // Formatar canal, número do pedido e título com precisão
-    if (isDelivery) {
+    // Número do pedido no formato do KDS oficial (ex: #70)
+    if (attendancePassword) {
+      orderNumber = `#${attendancePassword}`;
+    } else if (sessionNum) {
+      orderNumber = `#${sessionNum}`;
+    } else if (tableNumber && Number(tableNumber) > 0) {
+      orderNumber = `#${tableNumber}`;
+    } else {
+      orderNumber = `#${String(sessionId).slice(-2)}`;
+    }
+
+    // Código completo (ex: Nº #494-5812)
+    const externalNumber = sessionNum && basketId
+      ? `Nº #${sessionNum}-${basketId}`
+      : `Nº #${String(sessionId).slice(-6)}`;
+
+    // Rótulo do tipo (ex: Retirada, Delivery, Mesa 1)
+    if (session.with_withdrawal) {
+      orderType = 'balcao';
+      typeLabel = 'Retirada';
+      channel = 'BALCÃO';
+    } else if (isDelivery) {
       orderType = 'delivery';
+      typeLabel = rawChannel.includes('IFOOD') ? 'iFood' : 'Delivery';
       channel = rawChannel.includes('IFOOD') ? 'IFOOD' : 'TAKEAT';
-      // Prioridade do número do pedido para Delivery:
-      // 1. session_number (ex: 1578)
-      // 2. attendance_password (ex: 042)
-      // 3. basketId (ex: 7339)
-      // 4. Últimos dígitos do id
-      if (sessionNum) {
-        orderNumber = `#${sessionNum}`;
-      } else if (attendancePassword) {
-        orderNumber = `#${attendancePassword.padStart(3, '0')}`;
-      } else if (basketId) {
-        orderNumber = `#${basketId}`;
-      } else {
-        orderNumber = `#${String(sessionId).slice(-4)}`;
-      }
-      tableLabel = `${channel === 'IFOOD' ? 'iFood' : 'Delivery'} ${orderNumber}`;
     } else if (isBalcao) {
       orderType = 'balcao';
+      typeLabel = 'Balcão';
       channel = 'BALCÃO';
-      orderNumber = attendancePassword ? `Senha ${attendancePassword.padStart(3, '0')}` : `#${sessionNum ?? String(sessionId).slice(-4)}`;
-      tableLabel = `Balcão ${orderNumber}`;
     } else {
       orderType = 'table';
+      typeLabel = `Mesa ${String(tableNumber ?? session.name ?? '1')}`;
       channel = 'MESA';
-      const tbl = String(tableNumber ?? session.name ?? '?');
-      orderNumber = `Mesa ${tbl}`;
-      tableLabel = `Mesa ${tbl}`;
     }
 
     const brandName = session.brand_name ? String(session.brand_name) : undefined;
@@ -385,12 +400,14 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
       id: sessionId,
       sessionId,
       orderNumber,
+      externalNumber,
       orderKey: String(sessionId),
       tableNumber: tableNumber ? String(tableNumber) : undefined,
-      tableLabel,
+      tableLabel: typeLabel,
       type: orderType,
+      typeLabel,
       channel,
-      status: 'in_production',
+      status: 'new',
       createdAt,
       brandName,
       clientName,
@@ -400,6 +417,5 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
     });
   }
 
-  // Retorna rigorosamente APENAS pedidos em aberto!
   return activeOrders;
 }

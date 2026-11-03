@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, Key, AlertCircle, ShieldCheck } from 'lucide-react';
+import { LogIn, Key, AlertCircle, ShieldCheck, PlayCircle } from 'lucide-react';
 import { loginWithCredentials, exchangeApiKey, type StoredAuth } from '../api/takeatApi';
 
 interface Props {
@@ -11,7 +11,7 @@ export function SetupScreen({ onReady }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [restaurantId, setRestaurantId] = useState('');
+  const [restaurantId, setRestaurantId] = useState('92142'); // ID do restaurante House Food Park pré-definido
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,65 +52,133 @@ export function SetupScreen({ onReady }: Props) {
     }
   };
 
+  const handleDemoAccess = () => {
+    const demoAuth: StoredAuth = {
+      authMethod: 'credentials',
+      accessToken: 'demo_token',
+      expiresAt: Date.now() + 86400000,
+      restaurantId: 92142,
+      restaurantName: 'House Food Park (Modo Demo)',
+      email: 'demo@housefoodpark.com',
+    };
+    onReady(demoAuth);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#0c0f14' }}>
-      <div className="w-full max-w-md">
-        {/* Logo / Header */}
-        <div className="text-center mb-8">
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f8fafc',
+        padding: '24px',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '440px',
+          background: '#ffffff',
+          borderRadius: '24px',
+          padding: '36px 32px',
+          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.04)',
+          border: '1px solid #e2e8f0',
+        }}
+      >
+        {/* Header do KDS */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
             style={{
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: '#2563eb',
+              color: '#ffffff',
+              boxShadow: '0 8px 20px -4px rgba(37, 99, 235, 0.4)',
+              marginBottom: '16px',
             }}
           >
-            <ShieldCheck className="w-8 h-8 text-blue-500" strokeWidth={2} />
+            <ShieldCheck className="w-8 h-8 text-white" strokeWidth={2.2} />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', margin: 0 }}>
             Takeat KDS
           </h1>
-          <p className="text-xs uppercase tracking-widest mt-1 text-slate-400 font-semibold">
-            Kitchen Display System
+          <p style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '6px' }}>
+            Kitchen Display System • House Food Park
           </p>
         </div>
 
-        {/* Tab switch */}
+        {/* Alternador de método de entrada */}
         <div
-          className="flex p-1 rounded-xl mb-6"
-          style={{ background: '#151a23', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+          style={{
+            display: 'flex',
+            background: '#f1f5f9',
+            padding: '4px',
+            borderRadius: '12px',
+            marginBottom: '24px',
+          }}
         >
           <button
             type="button"
             onClick={() => { setTab('credentials'); setError(''); }}
-            className="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
             style={{
-              background: tab === 'credentials' ? '#2563eb' : 'transparent',
-              color: tab === 'credentials' ? '#ffffff' : '#94a3b8',
-              boxShadow: tab === 'credentials' ? '0 2px 8px rgba(37, 99, 235, 0.35)' : 'none',
+              flex: 1,
+              padding: '10px',
+              fontSize: '13px',
+              fontWeight: 700,
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              background: tab === 'credentials' ? '#ffffff' : 'transparent',
+              color: tab === 'credentials' ? '#0f172a' : '#64748b',
+              boxShadow: tab === 'credentials' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
-            <LogIn className="w-3.5 h-3.5" /> Login Takeat
+            <LogIn className="w-4 h-4 text-blue-600" />
+            <span>Login Takeat</span>
           </button>
+
           <button
             type="button"
             onClick={() => { setTab('api_key'); setError(''); }}
-            className="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
             style={{
-              background: tab === 'api_key' ? '#2563eb' : 'transparent',
-              color: tab === 'api_key' ? '#ffffff' : '#94a3b8',
-              boxShadow: tab === 'api_key' ? '0 2px 8px rgba(37, 99, 235, 0.35)' : 'none',
+              flex: 1,
+              padding: '10px',
+              fontSize: '13px',
+              fontWeight: 700,
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              background: tab === 'api_key' ? '#ffffff' : 'transparent',
+              color: tab === 'api_key' ? '#0f172a' : '#64748b',
+              boxShadow: tab === 'api_key' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
-            <Key className="w-3.5 h-3.5" /> Chave de API
+            <Key className="w-4 h-4 text-blue-600" />
+            <span>Chave de API</span>
           </button>
         </div>
 
-        {/* Tab 1: E-mail e Senha */}
+        {/* Tab 1: E-mail e Senha Takeat */}
         {tab === 'credentials' && (
-          <form onSubmit={(e) => { void handleCredentialsSubmit(e); }} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <form onSubmit={(e) => { void handleCredentialsSubmit(e); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em', marginBottom: '6px' }}>
                 E-mail do Restaurante
               </label>
               <input
@@ -119,44 +187,64 @@ export function SetupScreen({ onReady }: Props) {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="gestor@restaurante.com"
                 required
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
                 style={{
-                  background: '#161c26',
-                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '14px',
+                  color: '#0f172a',
+                  outline: 'none',
+                  background: '#f8fafc',
+                  boxSizing: 'border-box',
                 }}
-                onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
-                autoComplete="email"
+                onFocus={e => (e.target.style.borderColor = '#2563eb')}
+                onBlur={e => (e.target.style.borderColor = '#cbd5e1')}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Senha
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                Senha de Acesso
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Senha de acesso"
+                placeholder="Sua senha da Takeat"
                 required
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
                 style={{
-                  background: '#161c26',
-                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '14px',
+                  color: '#0f172a',
+                  outline: 'none',
+                  background: '#f8fafc',
+                  boxSizing: 'border-box',
                 }}
-                onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
-                autoComplete="current-password"
+                onFocus={e => (e.target.style.borderColor = '#2563eb')}
+                onBlur={e => (e.target.style.borderColor = '#cbd5e1')}
               />
             </div>
 
             {error && (
               <div
-                className="px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5"
-                style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.25)' }}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
               >
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                 <span>{error}</span>
               </div>
             )}
@@ -164,70 +252,101 @@ export function SetupScreen({ onReady }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer text-white"
               style={{
-                background: loading ? 'rgba(37, 99, 235, 0.5)' : '#2563eb',
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                border: 'none',
+                background: loading ? '#93c5fd' : '#2563eb',
+                color: '#ffffff',
+                fontSize: '15px',
+                fontWeight: 800,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 16px rgba(37, 99, 235, 0.35)',
+                letterSpacing: '0.02em',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                transition: 'background-color 0.15s ease',
               }}
             >
               {loading ? 'Entrando no Restaurante...' : 'Entrar no KDS'}
             </button>
 
-            <p className="text-xs text-center leading-relaxed pt-2 text-slate-500">
-              Mesmas credenciais de acesso do Painel Gestor ou PDV Takeat.
+            <p style={{ fontSize: '11px', textAlign: 'center', color: '#64748b', margin: '4px 0 0', lineHeight: 1.4 }}>
+              Utiliza a mesma conta com permissão de operador ou gestor na Takeat.
             </p>
           </form>
         )}
 
-        {/* Tab 2: API Key */}
+        {/* Tab 2: Chave de API */}
         {tab === 'api_key' && (
-          <form onSubmit={(e) => { void handleApiKeySubmit(e); }} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                API Key da Takeat
+          <form onSubmit={(e) => { void handleApiKeySubmit(e); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                Chave de API Takeat
               </label>
               <input
                 type="password"
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
-                placeholder="tk_live_..."
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
+                placeholder="Insira sua API Key"
+                required
                 style={{
-                  background: '#161c26',
-                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '14px',
+                  color: '#0f172a',
+                  outline: 'none',
+                  background: '#f8fafc',
+                  boxSizing: 'border-box',
                 }}
-                onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
-                autoComplete="off"
+                onFocus={e => (e.target.style.borderColor = '#2563eb')}
+                onBlur={e => (e.target.style.borderColor = '#cbd5e1')}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em', marginBottom: '6px' }}>
                 ID do Restaurante
               </label>
               <input
                 type="number"
                 value={restaurantId}
                 onChange={e => setRestaurantId(e.target.value)}
-                placeholder="Ex: 92142"
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
+                placeholder="92142"
+                required
                 style={{
-                  background: '#161c26',
-                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '14px',
+                  color: '#0f172a',
+                  outline: 'none',
+                  background: '#f8fafc',
+                  boxSizing: 'border-box',
                 }}
-                onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
+                onFocus={e => (e.target.style.borderColor = '#2563eb')}
+                onBlur={e => (e.target.style.borderColor = '#cbd5e1')}
               />
             </div>
 
             {error && (
               <div
-                className="px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5"
-                style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.25)' }}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
               >
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                 <span>{error}</span>
               </div>
             )}
@@ -235,21 +354,53 @@ export function SetupScreen({ onReady }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer text-white"
               style={{
-                background: loading ? 'rgba(37, 99, 235, 0.5)' : '#2563eb',
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                border: 'none',
+                background: loading ? '#93c5fd' : '#2563eb',
+                color: '#ffffff',
+                fontSize: '15px',
+                fontWeight: 800,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 16px rgba(37, 99, 235, 0.35)',
+                letterSpacing: '0.02em',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
               }}
             >
-              {loading ? 'Validando Chave...' : 'Conectar com Chave'}
+              {loading ? 'Conectando...' : 'Conectar via API'}
             </button>
-
-            <p className="text-xs text-center leading-relaxed pt-2 text-slate-500">
-              Chave disponível no menu Configurações ➔ Integrações do painel.
-            </p>
           </form>
         )}
+
+        {/* Separador e Botão de Demonstração Rápida */}
+        <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={handleDemoAccess}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              border: '1.5px solid #e2e8f0',
+              background: '#ffffff',
+              color: '#334155',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
+          >
+            <PlayCircle className="w-4 h-4 text-emerald-600" />
+            <span>Visualizar Demonstração com Pedidos Ativos</span>
+          </button>
+        </div>
       </div>
     </div>
   );
