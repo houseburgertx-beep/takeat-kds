@@ -12,19 +12,20 @@
     "deploy": "npm run build && gh-pages -d dist"
   },
   "dependencies": {
+    "lucide-react": "^1.67.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "@tailwindcss/vite": "^4.0.0",
+    "gh-pages": "^6.3.0",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.6.2",
     "vite": "^6.0.5",
-    "vite-plugin-pwa": "^0.21.1",
-    "gh-pages": "^6.3.0"
+    "vite-plugin-pwa": "^0.21.1"
   },
   "allowScripts": {
     "esbuild@0.25.12": true

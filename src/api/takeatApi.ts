@@ -25,17 +25,20 @@ export interface KDSItem {
 
 export interface KDSOrder {
   id: string | number;
-  sessionId?: number;
-  orderKey?: string;
+  sessionId: number;
+  orderNumber: string; // Ex: "#042" ou "#1578" ou "Mesa 4"
+  orderKey: string;
   tableNumber?: string | number;
   tableLabel: string;
   type: 'table' | 'delivery' | 'balcao';
+  channel: string; // 'IFOOD' | 'TAKEAT' | 'PDV' | 'MESA' | 'BALCAO'
   status: string;
   createdAt: string;
   brandName?: string;
   clientName?: string;
   items: KDSItem[];
   isNew: boolean;
+  totalPrice?: string;
 }
 
 const STORAGE_KEY = 'takeat_kds_auth_v1';
@@ -58,8 +61,7 @@ export function clearAuth(): void {
 }
 
 /**
- * Login direto com E-mail e Senha da Takeat (sessão oficial PDV/Gestor)
- * Endpoint: POST https://webhook.takeat.app/public/api/sessions
+ * Login com E-mail e Senha da Takeat (sessão oficial PDV/Gestor)
  */
 export async function loginWithCredentials(email: string, pass: string): Promise<StoredAuth> {
   const cleanEmail = email.trim();
@@ -91,7 +93,7 @@ export async function loginWithCredentials(email: string, pass: string): Promise
   const auth: StoredAuth = {
     authMethod: 'credentials',
     accessToken: data.token,
-    expiresAt: Date.now() + 15 * 86400000, // 15 dias de validade
+    expiresAt: Date.now() + 15 * 86400000,
     restaurantId: id,
     restaurantName,
     email: cleanEmail,
@@ -153,7 +155,6 @@ export async function exchangeApiKey(apiKey: string, restaurantId: number): Prom
 
 export async function refreshToken(auth: StoredAuth): Promise<StoredAuth | null> {
   if (auth.authMethod === 'credentials') {
-    // Credentials token is long-lived (15 days)
     return auth;
   }
 
@@ -216,14 +217,12 @@ function parseOrderItems(rawOrders: Record<string, unknown>[]): KDSItem[] {
 
     const complements: KDSItem['complements'] = [];
 
-    // Parse complement_categories (Takeat official schema)
     const complementCategories = (ord.complement_categories ?? []) as Record<string, unknown>[];
     if (Array.isArray(complementCategories)) {
       complementCategories.forEach((catWrapper) => {
         const catInfo = (catWrapper.complement_category ?? catWrapper) as Record<string, unknown>;
         const catName = String(catInfo.name ?? catInfo.category ?? 'Complemento');
 
-        // Check order_complements (standard in Takeat)
         const orderComplements = (catWrapper.order_complements ?? catWrapper.items ?? catWrapper.complements ?? []) as Record<string, unknown>[];
         if (Array.isArray(orderComplements)) {
           orderComplements.forEach((compWrapper) => {
@@ -251,10 +250,13 @@ function parseOrderItems(rawOrders: Record<string, unknown>[]): KDSItem[] {
   });
 }
 
+/**
+ * Busca APENAS pedidos EM ABERTO no momento (sem pedidos finalizados ou encerrados).
+ */
 export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
   const now = new Date();
-  // Fetch up to last 24h of sessions (API V1 accepts up to 3 days)
-  const start = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  // Busca pedidos das últimas 12 horas (apenas o turno de trabalho atual)
+  const start = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString();
   const end = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
 
   const queryParams: Record<string, string> = {
@@ -275,42 +277,50 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
       ? ((raw as Record<string, unknown>).data as Record<string, unknown>[])
       : [];
 
-  const orders: KDSOrder[] = [];
+  const activeOrders: KDSOrder[] = [];
 
   for (const session of sessions) {
-    const status = String(session.status ?? '').toLowerCase();
-    if (status === 'canceled' || status === 'cancelled') continue;
+    const rawStatus = String(session.status ?? '').toLowerCase().trim();
+
+    // 1. REGRA RÍGIDA: Pedidos finalizados/encerrados/cancelados são DESCARTADOS!
+    const isClosedOrCompleted = Boolean(
+      session.end_time ||
+      session.completed_at ||
+      session.canceled_at ||
+      rawStatus === 'completed' ||
+      rawStatus === 'closed' ||
+      rawStatus === 'canceled' ||
+      rawStatus === 'cancelled' ||
+      rawStatus === 'finished' ||
+      rawStatus === 'finalizado' ||
+      rawStatus === 'encerrado'
+    );
+
+    if (isClosedOrCompleted) {
+      continue; // Ignora pedidos de ontem ou já entregues
+    }
 
     const sessionId = Number(session.id);
-    const sessionNumber = session.session_number ?? session.id;
     const tableObj = session.table as Record<string, unknown> | undefined;
     const tableNumber = tableObj?.table_number ?? session.table_number;
     const tableType = String(tableObj?.table_type ?? '').toLowerCase();
-    const isDelivery = Boolean(session.is_delivery || tableType === 'delivery' || String(session.sales_channel ?? '').toUpperCase().includes('IFOOD'));
+    const rawChannel = String(session.sales_channel ?? '').toUpperCase();
+    const isDelivery = Boolean(session.is_delivery || tableType === 'delivery' || rawChannel.includes('IFOOD'));
     const isBalcao = Boolean(session.with_withdrawal || tableType === 'takeaway' || tableType === 'balcao' || (!isDelivery && (!tableNumber || Number(tableNumber) < 0)));
 
     let orderType: KDSOrder['type'] = 'table';
-    let tableLabel = `Mesa ${String(tableNumber ?? session.name ?? '?')}`;
+    let channel = 'MESA';
+    let orderNumber = '';
+    let tableLabel = '';
 
     const buyer = session.buyer as Record<string, unknown> | undefined;
-    const clientName = buyer?.name ? String(buyer.name) : undefined;
+    const clientName = buyer?.name ? String(buyer.name).trim() : undefined;
     const attendancePassword = session.attendance_password ? String(session.attendance_password) : undefined;
+    const sessionNum = session.session_number ? String(session.session_number) : undefined;
 
-    if (isDelivery) {
-      orderType = 'delivery';
-      const channel = String(session.sales_channel ?? 'Delivery');
-      tableLabel = `${channel} #${String(sessionNumber)}${clientName ? ` · ${clientName}` : ''}`;
-    } else if (isBalcao) {
-      orderType = 'balcao';
-      const pass = attendancePassword ? `Senha ${attendancePassword}` : `#${String(sessionNumber)}`;
-      tableLabel = `Balcão ${pass}${clientName ? ` · ${clientName}` : ''}`;
-    }
-
-    const brandName = session.brand_name ? String(session.brand_name) : undefined;
-    const createdAt = String(session.start_time ?? session.created_at ?? now.toISOString());
-
-    // Extract items across bills and order_baskets
+    // Extrair itens de baskets
     const rawItemsToParse: Record<string, unknown>[] = [];
+    let basketId = '';
 
     const bills = (session.bills ?? []) as Record<string, unknown>[];
     if (Array.isArray(bills) && bills.length > 0) {
@@ -318,6 +328,7 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
         const baskets = (bill.order_baskets ?? []) as Record<string, unknown>[];
         for (const basket of baskets) {
           if (basket.canceled_at) continue;
+          if (basket.basket_id && !basketId) basketId = String(basket.basket_id);
           const bOrders = (basket.orders ?? []) as Record<string, unknown>[];
           rawItemsToParse.push(...bOrders);
         }
@@ -325,6 +336,7 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
     } else if (Array.isArray(session.order_baskets)) {
       for (const basket of session.order_baskets as Record<string, unknown>[]) {
         if (basket.canceled_at) continue;
+        if (basket.basket_id && !basketId) basketId = String(basket.basket_id);
         const bOrders = (basket.orders ?? []) as Record<string, unknown>[];
         rawItemsToParse.push(...bOrders);
       }
@@ -334,27 +346,60 @@ export async function fetchOrders(auth: StoredAuth): Promise<KDSOrder[]> {
 
     const items = parseOrderItems(rawItemsToParse);
 
-    orders.push({
+    // Formatar canal, número do pedido e título com precisão
+    if (isDelivery) {
+      orderType = 'delivery';
+      channel = rawChannel.includes('IFOOD') ? 'IFOOD' : 'TAKEAT';
+      // Prioridade do número do pedido para Delivery:
+      // 1. session_number (ex: 1578)
+      // 2. attendance_password (ex: 042)
+      // 3. basketId (ex: 7339)
+      // 4. Últimos dígitos do id
+      if (sessionNum) {
+        orderNumber = `#${sessionNum}`;
+      } else if (attendancePassword) {
+        orderNumber = `#${attendancePassword.padStart(3, '0')}`;
+      } else if (basketId) {
+        orderNumber = `#${basketId}`;
+      } else {
+        orderNumber = `#${String(sessionId).slice(-4)}`;
+      }
+      tableLabel = `${channel === 'IFOOD' ? 'iFood' : 'Delivery'} ${orderNumber}`;
+    } else if (isBalcao) {
+      orderType = 'balcao';
+      channel = 'BALCÃO';
+      orderNumber = attendancePassword ? `Senha ${attendancePassword.padStart(3, '0')}` : `#${sessionNum ?? String(sessionId).slice(-4)}`;
+      tableLabel = `Balcão ${orderNumber}`;
+    } else {
+      orderType = 'table';
+      channel = 'MESA';
+      const tbl = String(tableNumber ?? session.name ?? '?');
+      orderNumber = `Mesa ${tbl}`;
+      tableLabel = `Mesa ${tbl}`;
+    }
+
+    const brandName = session.brand_name ? String(session.brand_name) : undefined;
+    const createdAt = String(session.start_time ?? session.created_at ?? now.toISOString());
+
+    activeOrders.push({
       id: sessionId,
       sessionId,
-      orderKey: String(sessionNumber),
+      orderNumber,
+      orderKey: String(sessionId),
       tableNumber: tableNumber ? String(tableNumber) : undefined,
       tableLabel,
       type: orderType,
-      status: String(session.status ?? 'open'),
+      channel,
+      status: 'in_production',
       createdAt,
       brandName,
       clientName,
       items,
       isNew: false,
+      totalPrice: session.total_price ? String(session.total_price) : undefined,
     });
   }
 
-  // Filter: prefer active sessions (not ended) if any exist
-  const activeOnly = orders.filter(o => {
-    const s = o.status.toLowerCase();
-    return s === 'open' || s === 'closing' || s === 'pending' || s === 'in_production' || s === 'accepted' || s === 'waiting';
-  });
-
-  return (activeOnly.length > 0 ? activeOnly : orders).slice(0, 30);
+  // Retorna rigorosamente APENAS pedidos em aberto!
+  return activeOrders;
 }

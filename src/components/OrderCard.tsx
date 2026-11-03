@@ -1,181 +1,298 @@
 import { useRef, useEffect } from 'react';
+import {
+  Clock,
+  Check,
+  RotateCcw,
+  PackageCheck,
+  AlertCircle,
+  ShoppingBag,
+  Store,
+  Utensils,
+  User,
+  Plus,
+} from 'lucide-react';
 import { useTimer } from '../hooks/useTimer';
 import type { KDSOrder } from '../api/takeatApi';
 
 interface Props {
   order: KDSOrder;
-  onDone: (id: string | number) => void;
+  stage: 'in_production' | 'ready';
+  theme: 'light' | 'dark';
+  onMarkReady?: (id: string | number) => void;
+  onUnmarkReady?: (id: string | number) => void;
+  onDispatch?: (id: string | number) => void;
 }
 
-const TYPE_CONFIG = {
-  table: { label: 'Mesa', bg: 'rgba(59,130,246,0.12)', border: '#3b82f6', icon: '🍽️', timerBg: '#3b82f6' },
-  delivery: { label: 'Delivery', bg: 'rgba(249,115,22,0.12)', border: '#f97316', icon: '🛵', timerBg: '#f97316' },
-  balcao: { label: 'Balcão', bg: 'rgba(34,197,94,0.12)', border: '#22c55e', icon: '🏪', timerBg: '#22c55e' },
-} as const;
-
-const URGENCY_COLORS = {
-  ok: '#22c55e',
-  warn: '#eab308',
-  danger: '#ef4444',
-} as const;
-
-export function OrderCard({ order, onDone }: Props) {
+export function OrderCard({ order, stage, theme, onMarkReady, onUnmarkReady, onDispatch }: Props) {
   const timer = useTimer(order.createdAt);
-  const cfg = TYPE_CONFIG[order.type] ?? TYPE_CONFIG.table;
   const cardRef = useRef<HTMLDivElement>(null);
+  const isLight = theme === 'light';
 
-  // Scroll into view when new
   useEffect(() => {
     if (order.isNew && cardRef.current) {
       cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [order.isNew]);
 
-  const timerColor = URGENCY_COLORS[timer.urgency];
+  const isIfood = order.channel.toUpperCase() === 'IFOOD';
+  const isDelivery = order.type === 'delivery';
+  const isBalcao = order.type === 'balcao';
+
+  // Configuração visual do canal / tipo de pedido (sem emojis)
+  let channelConfig = {
+    label: 'MESA',
+    badgeBg: isLight ? '#eff6ff' : 'rgba(59, 130, 246, 0.12)',
+    badgeBorder: isLight ? '#bfdbfe' : 'rgba(59, 130, 246, 0.3)',
+    badgeText: isLight ? '#1d4ed8' : '#60a5fa',
+    topAccent: '#2563eb',
+    Icon: Utensils,
+  };
+
+  if (isIfood) {
+    channelConfig = {
+      label: 'iFood',
+      badgeBg: isLight ? '#fff1f2' : 'rgba(234, 29, 44, 0.14)',
+      badgeBorder: isLight ? '#fecdd3' : 'rgba(234, 29, 44, 0.35)',
+      badgeText: isLight ? '#be123c' : '#fb7185',
+      topAccent: '#e11d48',
+      Icon: ShoppingBag,
+    };
+  } else if (isDelivery) {
+    channelConfig = {
+      label: 'DELIVERY',
+      badgeBg: isLight ? '#fff7ed' : 'rgba(249, 115, 22, 0.14)',
+      badgeBorder: isLight ? '#fed7aa' : 'rgba(249, 115, 22, 0.35)',
+      badgeText: isLight ? '#c2410c' : '#fb923c',
+      topAccent: '#ea580c',
+      Icon: ShoppingBag,
+    };
+  } else if (isBalcao) {
+    channelConfig = {
+      label: 'BALCÃO',
+      badgeBg: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.14)',
+      badgeBorder: isLight ? '#a7f3d0' : 'rgba(16, 185, 129, 0.35)',
+      badgeText: isLight ? '#047857' : '#34d399',
+      topAccent: '#059669',
+      Icon: Store,
+    };
+  }
+
+  // Estilos cromáticos de SLA / Timer
+  const timerConfig = {
+    ok: {
+      bg: isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.12)',
+      border: isLight ? '#a7f3d0' : 'rgba(16, 185, 129, 0.3)',
+      text: isLight ? '#047857' : '#34d399',
+    },
+    warn: {
+      bg: isLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.14)',
+      border: isLight ? '#fde68a' : 'rgba(245, 158, 11, 0.35)',
+      text: isLight ? '#b45309' : '#fbbf24',
+    },
+    danger: {
+      bg: isLight ? '#fef2f2' : 'rgba(239, 68, 68, 0.16)',
+      border: isLight ? '#fecaca' : 'rgba(239, 68, 68, 0.45)',
+      text: isLight ? '#b91c1c' : '#f87171',
+    },
+  }[timer.urgency];
+
+  const ChannelIcon = channelConfig.Icon;
 
   return (
-    <div
+    <article
       ref={cardRef}
       className={order.isNew ? 'card-new' : 'card-enter'}
       style={{
-        background: 'var(--bg-card)',
-        border: `1.5px solid ${cfg.border}`,
-        borderRadius: '16px',
+        background: isLight ? '#ffffff' : 'linear-gradient(180deg, #181d26 0%, #11151c 100%)',
+        border: isLight ? '1.5px solid #e2e8f0' : '1.5px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '22px',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        boxShadow: `0 0 0 1px ${cfg.border}22, 0 4px 24px rgba(0,0,0,0.3)`,
+        boxShadow: isLight
+          ? '0 10px 25px -4px rgba(0, 0, 0, 0.07), 0 4px 10px -2px rgba(0, 0, 0, 0.03)'
+          : '0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.09)',
         transition: 'transform 0.15s ease, box-shadow 0.15s ease',
       }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 0 2px ${cfg.border}44, 0 8px 32px rgba(0,0,0,0.4)`;
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-        (e.currentTarget as HTMLDivElement).style.boxShadow = `0 0 0 1px ${cfg.border}22, 0 4px 24px rgba(0,0,0,0.3)`;
-      }}
     >
-      {/* NEW badge */}
+      {/* Linha de destaque no topo */}
+      <div style={{ height: 3.5, background: channelConfig.topAccent }} />
+
+      {/* Selo NOVO para pedidos recentes */}
       {order.isNew && (
         <div style={{
-          position: 'absolute', top: 10, right: 10, zIndex: 10,
-          background: '#ef4444', color: 'white', fontSize: '10px',
-          fontWeight: 700, padding: '2px 8px', borderRadius: '99px',
-          letterSpacing: '0.05em', animation: 'pulse-ring 1.5s ease infinite',
+          position: 'absolute', top: 12, right: 12, zIndex: 10,
+          background: '#ef4444', color: '#ffffff', fontSize: '9px',
+          fontWeight: 900, padding: '2px 8px', borderRadius: '999px',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
         }}>
           NOVO
         </div>
       )}
 
-      {/* Header */}
-      <div style={{
-        padding: '14px 16px 10px',
-        background: cfg.bg,
-        borderBottom: `1px solid ${cfg.border}22`,
+      {/* Cabeçalho do Card */}
+      <header style={{
+        padding: '14px 16px 12px',
+        borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid rgba(255, 255, 255, 0.06)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          {/* Type badge */}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            background: cfg.border, color: 'white',
-            fontSize: '11px', fontWeight: 700, padding: '3px 10px',
-            borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.04em',
-          }}>
-            {cfg.icon} {cfg.label}
-          </span>
-
-          {/* Table / Order number */}
-          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
-            {order.tableLabel}
-          </span>
-
-          {/* Order ID */}
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto', fontFamily: 'monospace' }}>
-            #{String(order.orderKey ?? order.id).slice(-6)}
-          </span>
-        </div>
-
-        {/* Timer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Linha superior: Canal / Tipo e Timer */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: '50%', background: timerColor,
-              boxShadow: `0 0 6px ${timerColor}`,
-              animation: timer.urgency === 'danger' ? 'pulse-ring 1s ease infinite' : undefined,
-            }} />
-            <span style={{ fontSize: '13px', fontWeight: 600, color: timerColor, fontFamily: 'monospace' }}>
-              {timer.label}
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: channelConfig.badgeBg,
+              border: `1px solid ${channelConfig.badgeBorder}`,
+              color: channelConfig.badgeText,
+              fontSize: '11px', fontWeight: 800, padding: '3px 8px',
+              borderRadius: '8px', letterSpacing: '0.04em',
+            }}>
+              <ChannelIcon className="w-3.5 h-3.5" strokeWidth={2.4} />
+              <span>{channelConfig.label}</span>
             </span>
-            {timer.urgency === 'danger' && (
-              <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700 }}>⚠ ATRASADO</span>
+
+            {order.brandName && (
+              <span style={{
+                fontSize: '11px',
+                color: isLight ? '#64748b' : '#94a3b8',
+                padding: '2px 6px',
+                borderRadius: '6px',
+                background: isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.04)',
+                fontWeight: 600,
+              }}>
+                {order.brandName}
+              </span>
             )}
           </div>
-          {order.brandName && (
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)' }}>
-              {order.brandName}
+
+          {/* Timer em cápsula */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: timerConfig.bg,
+            border: `1px solid ${timerConfig.border}`,
+            padding: '3px 8px', borderRadius: '8px',
+          }}>
+            <Clock className="w-3 h-3" style={{ color: timerConfig.text }} />
+            <span style={{
+              fontSize: '12px', fontWeight: 700,
+              color: timerConfig.text, fontFamily: 'monospace',
+            }}>
+              {timer.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Identificação Principal do Pedido (NÚMERO DO PEDIDO BEM DESTACADO) */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+          <div>
+            <h2 style={{
+              fontSize: isDelivery ? '22px' : '20px',
+              fontWeight: 900,
+              color: isLight ? '#0f172a' : '#ffffff',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
+            }}>
+              {order.orderNumber || order.tableLabel}
+            </h2>
+
+            {/* Nome do Cliente */}
+            {order.clientName && (
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: isLight ? '#475569' : '#94a3b8',
+                marginTop: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}>
+                <User className="w-3.5 h-3.5" style={{ color: isLight ? '#64748b' : '#94a3b8' }} />
+                <span>{order.clientName}</span>
+              </div>
+            )}
+          </div>
+
+          {order.totalPrice && (
+            <span style={{ fontSize: '12px', fontWeight: 700, color: isLight ? '#64748b' : '#64748b' }}>
+              R$ {parseFloat(order.totalPrice).toFixed(2)}
             </span>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Timer progress bar */}
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.04)' }}>
-        <div
-          className="timer-bar"
-          style={{
-            width: `${timer.progress}%`,
-            background: `linear-gradient(90deg, ${timerColor}88, ${timerColor})`,
-          }}
-        />
-      </div>
-
-      {/* Items list */}
-      <div style={{ flex: 1, padding: '12px 16px', overflowY: 'auto', maxHeight: 340 }}>
+      {/* Lista de Itens do Pedido */}
+      <div style={{
+        flex: 1,
+        padding: '12px 16px',
+        overflowY: 'auto',
+        maxHeight: 320,
+      }}>
         {order.items.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>
-            Carregando itens...
+          <p style={{ color: isLight ? '#94a3b8' : '#64748b', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>
+            Nenhum item informado
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {order.items.map((item, idx) => (
-              <div key={item.id ?? idx}>
-                {/* Main item */}
+              <div
+                key={item.id ?? idx}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '12px',
+                  background: isLight ? '#f8fafc' : 'rgba(255, 255, 255, 0.025)',
+                  border: isLight ? '1px solid #eef2f6' : '1px solid rgba(255, 255, 255, 0.04)',
+                }}
+              >
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  {/* Qty badge */}
+                  {/* Badge de Quantidade */}
                   <div style={{
-                    minWidth: 28, height: 28, borderRadius: '8px',
-                    background: `${cfg.border}20`, border: `1px solid ${cfg.border}44`,
+                    minWidth: 26, height: 26, borderRadius: '8px',
+                    background: isLight ? '#0f172a' : 'rgba(255, 255, 255, 0.08)',
+                    border: isLight ? 'none' : '1px solid rgba(255, 255, 255, 0.12)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '13px', fontWeight: 700, color: cfg.border,
+                    fontSize: '12px', fontWeight: 900,
+                    color: '#ffffff', flexShrink: 0,
                   }}>
                     {item.qty}x
                   </div>
+
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      color: isLight ? '#0f172a' : '#f8fafc',
+                      lineHeight: 1.3,
+                    }}>
                       {item.name}
                     </p>
-                    {/* Observation */}
+
+                    {/* Observação / Detalhe (alerta limpo sem emoji) */}
                     {item.obs && (
-                      <p style={{
-                        fontSize: '11px', color: '#eab308', marginTop: 3,
-                        padding: '2px 6px', borderRadius: '4px',
-                        background: 'rgba(234,179,8,0.1)', display: 'inline-block',
+                      <div style={{
+                        marginTop: 5, padding: '4px 8px', borderRadius: '8px',
+                        background: isLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.12)',
+                        border: isLight ? '1px solid #fde68a' : '1px solid rgba(245, 158, 11, 0.25)',
+                        color: isLight ? '#b45309' : '#fbbf24',
+                        fontSize: '11px', fontWeight: 600,
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
                       }}>
-                        ⚡ {item.obs}
-                      </p>
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" style={{ color: isLight ? '#b45309' : '#fbbf24' }} />
+                        <span>{item.obs}</span>
+                      </div>
                     )}
-                    {/* Complements */}
+
+                    {/* Complementos e adicionais */}
                     {item.complements.length > 0 && (
-                      <div style={{ marginTop: 6, paddingLeft: 2 }}>
+                      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         {item.complements.map((c, ci) => (
-                          <div key={ci} style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 3 }}>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
-                              + {c.qty > 1 ? `${c.qty}x ` : ''}
-                            </span>
-                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                              {c.name}
+                          <div key={ci} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                            <Plus className="w-3 h-3 text-sky-500 shrink-0" />
+                            <span style={{
+                              fontSize: '12px',
+                              color: isLight ? '#334155' : '#cbd5e1',
+                              fontWeight: 500,
+                            }}>
+                              {c.qty > 1 ? `${c.qty}x ` : ''}{c.name}
                             </span>
                           </div>
                         ))}
@@ -183,34 +300,74 @@ export function OrderCard({ order, onDone }: Props) {
                     )}
                   </div>
                 </div>
-                {/* Divider between items */}
-                {idx < order.items.length - 1 && (
-                  <div style={{ height: 1, background: 'var(--border-default)', marginTop: 10 }} />
-                )}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Footer — Done button */}
-      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border-default)' }}>
-        <button
-          onClick={() => onDone(order.id)}
-          style={{
-            width: '100%', padding: '10px', borderRadius: '10px', border: 'none',
-            background: `linear-gradient(135deg, ${cfg.border}, ${cfg.border}cc)`,
-            color: 'white', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-            letterSpacing: '0.04em', textTransform: 'uppercase',
-            boxShadow: `0 2px 12px ${cfg.border}44`,
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
-          ✓ Pronto
-        </button>
-      </div>
-    </div>
+      {/* Ações no Rodapé do Card */}
+      <footer style={{
+        padding: '12px 16px',
+        borderTop: isLight ? '1px solid #f1f5f9' : '1px solid rgba(255, 255, 255, 0.06)',
+        background: isLight ? '#fafafa' : 'rgba(0, 0, 0, 0.15)',
+      }}>
+        {stage === 'in_production' ? (
+          <button
+            type="button"
+            onClick={() => onMarkReady?.(order.id)}
+            style={{
+              width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#ffffff', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+              letterSpacing: '0.04em', textTransform: 'uppercase',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              transition: 'opacity 0.15s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            <Check className="w-4 h-4 stroke-[3]" />
+            <span>Marcar como Pronto</span>
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => onUnmarkReady?.(order.id)}
+              style={{
+                padding: '10px 12px', borderRadius: '10px',
+                border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(255, 255, 255, 0.1)',
+                background: isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.04)',
+                color: isLight ? '#475569' : '#94a3b8',
+                fontSize: '12px', fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+              }}
+              title="Retornar para Em Produção"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Voltar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onDispatch?.(order.id)}
+              style={{
+                flex: 1, padding: '10px 14px', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                color: '#ffffff', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                letterSpacing: '0.03em', textTransform: 'uppercase',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              <PackageCheck className="w-4 h-4" />
+              <span>Despachar / Entregue</span>
+            </button>
+          </div>
+        )}
+      </footer>
+    </article>
   );
 }

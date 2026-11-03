@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LogIn, Key, AlertCircle, ShieldCheck } from 'lucide-react';
 import { loginWithCredentials, exchangeApiKey, type StoredAuth } from '../api/takeatApi';
 
 interface Props {
@@ -52,52 +53,56 @@ export function SetupScreen({ onReady }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg-base)' }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#0c0f14' }}>
       <div className="w-full max-w-md">
         {/* Logo / Header */}
         <div className="text-center mb-8">
           <div
-            className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 shadow-xl shadow-blue-500/20"
-            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+            style={{
+              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+            }}
           >
-            <span style={{ fontSize: 36 }}>🍳</span>
+            <ShieldCheck className="w-8 h-8 text-blue-500" strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+          <h1 className="text-2xl font-black tracking-tight text-white">
             Takeat KDS
           </h1>
-          <p className="text-xs uppercase tracking-widest mt-1.5 font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs uppercase tracking-widest mt-1 text-slate-400 font-semibold">
             Kitchen Display System
           </p>
         </div>
 
         {/* Tab switch */}
         <div
-          className="flex p-1 rounded-2xl mb-6"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+          className="flex p-1 rounded-xl mb-6"
+          style={{ background: '#151a23', border: '1px solid rgba(255, 255, 255, 0.08)' }}
         >
           <button
             type="button"
             onClick={() => { setTab('credentials'); setError(''); }}
-            className="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
             style={{
-              background: tab === 'credentials' ? '#3b82f6' : 'transparent',
-              color: tab === 'credentials' ? '#ffffff' : 'var(--text-muted)',
-              boxShadow: tab === 'credentials' ? '0 2px 10px rgba(59,130,246,0.3)' : 'none',
+              background: tab === 'credentials' ? '#2563eb' : 'transparent',
+              color: tab === 'credentials' ? '#ffffff' : '#94a3b8',
+              boxShadow: tab === 'credentials' ? '0 2px 8px rgba(37, 99, 235, 0.35)' : 'none',
             }}
           >
-            <span>🔐</span> Login Takeat
+            <LogIn className="w-3.5 h-3.5" /> Login Takeat
           </button>
           <button
             type="button"
             onClick={() => { setTab('api_key'); setError(''); }}
-            className="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
             style={{
-              background: tab === 'api_key' ? '#3b82f6' : 'transparent',
-              color: tab === 'api_key' ? '#ffffff' : 'var(--text-muted)',
-              boxShadow: tab === 'api_key' ? '0 2px 10px rgba(59,130,246,0.3)' : 'none',
+              background: tab === 'api_key' ? '#2563eb' : 'transparent',
+              color: tab === 'api_key' ? '#ffffff' : '#94a3b8',
+              boxShadow: tab === 'api_key' ? '0 2px 8px rgba(37, 99, 235, 0.35)' : 'none',
             }}
           >
-            <span>⚡</span> API Key
+            <Key className="w-3.5 h-3.5" /> Chave de API
           </button>
         </div>
 
@@ -105,8 +110,8 @@ export function SetupScreen({ onReady }: Props) {
         {tab === 'credentials' && (
           <form onSubmit={(e) => { void handleCredentialsSubmit(e); }} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                E-mail da Conta Takeat
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                E-mail do Restaurante
               </label>
               <input
                 type="email"
@@ -114,65 +119,63 @@ export function SetupScreen({ onReady }: Props) {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="gestor@restaurante.com"
                 required
-                className="w-full px-4 py-3.5 rounded-xl text-sm outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
                 style={{
-                  background: 'var(--bg-card)',
-                  border: '1.5px solid var(--border-default)',
-                  color: 'var(--text-primary)',
+                  background: '#161c26',
+                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
                 }}
                 onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
                 autoComplete="email"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Senha
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Sua senha da Takeat"
+                placeholder="Senha de acesso"
                 required
-                className="w-full px-4 py-3.5 rounded-xl text-sm outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
                 style={{
-                  background: 'var(--bg-card)',
-                  border: '1.5px solid var(--border-default)',
-                  color: 'var(--text-primary)',
+                  background: '#161c26',
+                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
                 }}
                 onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
                 autoComplete="current-password"
               />
             </div>
 
             {error && (
               <div
-                className="px-4 py-3 rounded-xl text-xs font-medium leading-relaxed"
-                style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
+                className="px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5"
+                style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.25)' }}
               >
-                ⚠️ {error}
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{error}</span>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer text-white"
               style={{
-                background: loading ? 'rgba(59,130,246,0.5)' : 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                color: 'white',
+                background: loading ? 'rgba(37, 99, 235, 0.5)' : '#2563eb',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 20px rgba(59,130,246,0.35)',
+                boxShadow: loading ? 'none' : '0 4px 16px rgba(37, 99, 235, 0.35)',
               }}
             >
-              {loading ? 'Entrando no Restaurante...' : 'Entrar no KDS →'}
+              {loading ? 'Entrando no Restaurante...' : 'Entrar no KDS'}
             </button>
 
-            <p className="text-xs text-center leading-relaxed pt-2" style={{ color: 'var(--text-muted)' }}>
-              Use os mesmos dados de acesso que você usa para entrar no <b>Painel Gestor</b> ou no <b>PDV Takeat</b>.
+            <p className="text-xs text-center leading-relaxed pt-2 text-slate-500">
+              Mesmas credenciais de acesso do Painel Gestor ou PDV Takeat.
             </p>
           </form>
         )}
@@ -181,7 +184,7 @@ export function SetupScreen({ onReady }: Props) {
         {tab === 'api_key' && (
           <form onSubmit={(e) => { void handleApiKeySubmit(e); }} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 API Key da Takeat
               </label>
               <input
@@ -189,20 +192,19 @@ export function SetupScreen({ onReady }: Props) {
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 placeholder="tk_live_..."
-                className="w-full px-4 py-3.5 rounded-xl text-sm outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
                 style={{
-                  background: 'var(--bg-card)',
-                  border: '1.5px solid var(--border-default)',
-                  color: 'var(--text-primary)',
+                  background: '#161c26',
+                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
                 }}
                 onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
                 autoComplete="off"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 ID do Restaurante
               </label>
               <input
@@ -210,42 +212,41 @@ export function SetupScreen({ onReady }: Props) {
                 value={restaurantId}
                 onChange={e => setRestaurantId(e.target.value)}
                 placeholder="Ex: 92142"
-                className="w-full px-4 py-3.5 rounded-xl text-sm outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-white placeholder-slate-500"
                 style={{
-                  background: 'var(--bg-card)',
-                  border: '1.5px solid var(--border-default)',
-                  color: 'var(--text-primary)',
+                  background: '#161c26',
+                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
                 }}
                 onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)')}
               />
             </div>
 
             {error && (
               <div
-                className="px-4 py-3 rounded-xl text-xs font-medium leading-relaxed"
-                style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
+                className="px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2.5"
+                style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.25)' }}
               >
-                ⚠️ {error}
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{error}</span>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer text-white"
               style={{
-                background: loading ? 'rgba(59,130,246,0.5)' : 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                color: 'white',
+                background: loading ? 'rgba(37, 99, 235, 0.5)' : '#2563eb',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 20px rgba(59,130,246,0.35)',
+                boxShadow: loading ? 'none' : '0 4px 16px rgba(37, 99, 235, 0.35)',
               }}
             >
-              {loading ? 'Validando Chave...' : 'Conectar com API Key →'}
+              {loading ? 'Validando Chave...' : 'Conectar com Chave'}
             </button>
 
-            <p className="text-xs text-center leading-relaxed pt-2" style={{ color: 'var(--text-muted)' }}>
-              Configure sua API Key no painel em <b>Configurações → Integrações</b>.
+            <p className="text-xs text-center leading-relaxed pt-2 text-slate-500">
+              Chave disponível no menu Configurações ➔ Integrações do painel.
             </p>
           </form>
         )}
